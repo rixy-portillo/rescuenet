@@ -1,0 +1,253 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ──────────────────────────────────────
+// Enums
+// ──────────────────────────────────────
+
+enum UserRole {
+  ADMIN
+}
+
+enum Species {
+  DOG
+  CAT
+}
+
+enum AnimalSize {
+  SMALL
+  MEDIUM
+  LARGE
+  XLARGE
+}
+
+enum AnimalGender {
+  MALE
+  FEMALE
+  UNKNOWN
+}
+
+enum ListingStatus {
+  ACTIVE
+  RESCUED
+  ADOPTED
+  TRANSFERRED
+  EUTHANIZED
+  REMOVED
+}
+
+enum UrgencyTier {
+  LOW
+  MED
+  HIGH
+  LAST_CALL
+}
+
+enum VerificationStatus {
+  UNVERIFIED
+  VERIFIED
+  PARTNER_SHELTER
+}
+
+enum RiskReason {
+  TIME_LIMIT
+  SPACE
+  MEDICAL
+  BEHAVIORAL
+  OTHER
+}
+
+// ──────────────────────────────────────
+// Auth.js models
+// ──────────────────────────────────────
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  name          String?
+  image         String?
+  role          UserRole  @default(ADMIN)
+  isActive      Boolean   @default(true) @map("is_active")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  accounts        Account[]
+  sessions        Session[]
+  createdListings Listing[]        @relation("ListingCreator")
+  statusChanges   StatusHistory[]
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String  @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique @map("session_token")
+  userId       String   @map("user_id")
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ──────────────────────────────────────
+// Core domain models
+// ──────────────────────────────────────
+
+model Shelter {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?  @db.Text
+  phone        String?
+  email        String?
+  website      String?
+  addressLine1 String?  @map("address_line_1")
+  addressLine2 String?  @map("address_line_2")
+  city         String
+  state        String   @db.VarChar(2)
+  zipCode      String?  @map("zip_code")
+  latitude     Decimal? @db.Decimal(10, 8) // Reserved for future radius search — unused in v1
+  longitude    Decimal? @db.Decimal(11, 8) // Reserved for future radius search — unused in v1
+  logoUrl      String?  @map("logo_url")
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  animals Animal[]
+
+  @@index([state])
+  @@map("shelters")
+}
+
+model Animal {
+  id              String        @id @default(cuid())
+  shelterId       String        @map("shelter_id")
+  name            String?       @db.VarChar(100)
+  externalId      String?       @map("external_id")
+  species         Species
+  breed           String?       @db.VarChar(100)
+  breedSecondary  String?       @map("breed_secondary") @db.VarChar(100)
+  ageYears        Int?          @map("age_years")
+  ageMonths       Int?          @map("age_months")
+  gender          AnimalGender?
+  size            AnimalSize?
+  weightLbs       Decimal?      @map("weight_lbs") @db.Decimal(5, 1)
+  color           String?       @db.VarChar(100)
+  description     String?       @db.Text
+  medicalNotes    String?       @map("medical_notes") @db.Text
+  behavioralNotes String?       @map("behavioral_notes") @db.Text
+  goodWithKids    Boolean?      @map("good_with_kids")
+  goodWithDogs    Boolean?      @map("good_with_dogs")
+  goodWithCats    Boolean?      @map("good_with_cats")
+  houseTrained    Boolean?      @map("house_trained")
+  spayedNeutered  Boolean?      @map("spayed_neutered")
+  vaccinated      Boolean?
+  specialNeeds    String?       @map("special_needs") @db.Text
+  intakeDate      DateTime?     @map("intake_date") @db.Date
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  shelter  Shelter   @relation(fields: [shelterId], references: [id], onDelete: Cascade)
+  photos   Photo[]
+  listings Listing[]
+
+  @@index([shelterId])
+  @@index([species])
+  @@map("animals")
+}
+
+model Photo {
+  id        String   @id @default(cuid())
+  animalId  String   @map("animal_id")
+  url       String
+  r2Key     String   @map("r2_key")
+  sortOrder Int      @default(0) @map("sort_order")
+  altText   String?  @map("alt_text")
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  animal Animal @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@index([animalId])
+  @@map("photos")
+}
+
+model Listing {
+  id                 String             @id @default(cuid())
+  animalId           String             @map("animal_id")
+  status             ListingStatus      @default(ACTIVE)
+  urgency            UrgencyTier        @default(MED)
+  deadlineAt         DateTime?          @map("deadline_at")
+  riskReason         RiskReason         @default(TIME_LIMIT) @map("risk_reason")
+  notes              String?            @db.Text
+  internalNotes      String?            @map("internal_notes") @db.Text
+  sourceUrl          String?            @map("source_url")
+  sourceNotes        String?            @map("source_notes") @db.Text
+  verificationStatus VerificationStatus @default(UNVERIFIED) @map("verification_status")
+  verifiedAt         DateTime?          @map("verified_at")
+  publishedAt        DateTime?          @map("published_at")
+  createdById        String?            @map("created_by_id")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  animal        Animal          @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  createdBy     User?           @relation("ListingCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  statusHistory StatusHistory[]
+
+  @@index([status, urgency])
+  @@index([deadlineAt])
+  @@index([animalId])
+  @@map("listings")
+}
+
+model StatusHistory {
+  id          String         @id @default(cuid())
+  listingId   String         @map("listing_id")
+  fromStatus  ListingStatus? @map("from_status")
+  toStatus    ListingStatus  @map("to_status")
+  changedById String?        @map("changed_by_id")
+  reason      String?        @db.Text
+  createdAt   DateTime       @default(now()) @map("created_at")
+
+  listing   Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  changedBy User?   @relation(fields: [changedById], references: [id])
+
+  @@index([listingId, createdAt(sort: Desc)])
+  @@map("status_history")
+}
