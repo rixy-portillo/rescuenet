@@ -134,14 +134,14 @@ model Shelter {
   id           String   @id @default(cuid())
   name         String
   description  String?  @db.Text
-  phone        String?
+  phone        String
   email        String?
   website      String?
-  addressLine1 String?  @map("address_line_1")
+  addressLine1 String   @map("address_line_1")
   addressLine2 String?  @map("address_line_2")
   city         String
   state        String   @db.VarChar(2)
-  zipCode      String?  @map("zip_code")
+  zipCode      String   @map("zip_code")
   latitude     Decimal? @db.Decimal(10, 8) // Reserved for future radius search — unused in v1
   longitude    Decimal? @db.Decimal(11, 8) // Reserved for future radius search — unused in v1
   logoUrl      String?  @map("logo_url")
@@ -165,10 +165,10 @@ model Animal {
   breedSecondary  String?       @map("breed_secondary") @db.VarChar(100)
   ageYears        Int?          @map("age_years")
   ageMonths       Int?          @map("age_months")
-  gender          AnimalGender?
-  size            AnimalSize?
-  weightLbs       Decimal?      @map("weight_lbs") @db.Decimal(5, 1)
-  color           String?       @db.VarChar(100)
+  gender          AnimalGender
+  size            AnimalSize
+  weightLbs       Decimal       @map("weight_lbs") @db.Decimal(5, 1)
+  color           String        @db.VarChar(100)
   description     String?       @db.Text
   medicalNotes    String?       @map("medical_notes") @db.Text
   behavioralNotes String?       @map("behavioral_notes") @db.Text

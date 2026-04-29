@@ -19,14 +19,14 @@ export default async function EditShelterPage({
           id: shelter.id,
           name: shelter.name,
           description: shelter.description ?? undefined,
-          phone: shelter.phone!,
+          phone: shelter.phone,
           email: shelter.email ?? undefined,
           website: shelter.website ?? undefined,
-          addressLine1: shelter.addressLine1!,
+          addressLine1: shelter.addressLine1,
           addressLine2: shelter.addressLine2 ?? undefined,
           city: shelter.city,
           state: shelter.state,
-          zipCode: shelter.zipCode!,
+          zipCode: shelter.zipCode,
         }}
       />
     </div>

@@ -1,8 +1,22 @@
-import { getActiveListings } from "@/data/listings";
-import { UrgencyTierBadge } from "@/components/listings/urgency-tier-badge";
+import { Suspense } from "react";
+import Link from "next/link";
+import { getFilteredListings } from "@/data/listings";
+import { FilterPanel } from "@/components/listings/filter-panel";
+import { ListingCard } from "@/components/listings/listing-card";
 
-export default async function ListingsPage() {
-  const listings = await getActiveListings();
+export default async function ListingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ species?: string; urgency?: string; state?: string }>;
+}) {
+  const params = await searchParams;
+
+  const species = params.species?.split(",").filter(Boolean);
+  const urgency = params.urgency?.split(",").filter(Boolean);
+  const state = params.state;
+
+  const listings = await getFilteredListings({ species, urgency, state });
+  const hasFilters = !!(species?.length || urgency?.length || state);
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -11,54 +25,28 @@ export default async function ListingsPage() {
         Browse animals that need help now. No account needed.
       </p>
 
+      <Suspense>
+        <FilterPanel />
+      </Suspense>
+
       <div className="mt-8">
         {listings.length === 0 ? (
-          <p className="text-center text-muted-foreground py-16">
-            No active listings right now. Check back soon.
-          </p>
+          <div className="text-center py-16">
+            <p className="text-muted-foreground">No listings match your filters.</p>
+            {hasFilters && (
+              <Link
+                href="/listings"
+                className="mt-4 inline-block text-sm underline text-muted-foreground hover:text-foreground"
+              >
+                Clear filters
+              </Link>
+            )}
+          </div>
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {listings.map((listing) => {
-              const animal = listing.animal;
-              const shelter = animal.shelter;
-              return (
-                <div key={listing.id} className="border rounded-lg p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <p className="font-semibold">
-                        {animal.name ?? "Unnamed"}{" "}
-                        <span className="text-muted-foreground font-normal text-sm">
-                          ({animal.species.toLowerCase()})
-                        </span>
-                      </p>
-                      {animal.breed && (
-                        <p className="text-sm text-muted-foreground">{animal.breed}</p>
-                      )}
-                    </div>
-                    <UrgencyTierBadge tier={listing.urgency} />
-                  </div>
-
-                  <div className="text-sm text-muted-foreground">
-                    <p>{shelter.name}</p>
-                    <p>
-                      {shelter.city}, {shelter.state}
-                    </p>
-                  </div>
-
-                  {listing.deadlineAt && (
-                    <p className="text-sm font-medium text-red-600">
-                      Deadline: {new Date(listing.deadlineAt).toLocaleDateString()}
-                    </p>
-                  )}
-
-                  {listing.notes && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">
-                      {listing.notes}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
+            {listings.map((listing) => (
+              <ListingCard key={listing.id} {...listing} />
+            ))}
           </div>
         )}
       </div>
