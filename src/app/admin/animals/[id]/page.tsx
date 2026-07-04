@@ -43,6 +43,7 @@ export default async function EditAnimalPage({
           specialNeeds: animal.specialNeeds ?? undefined,
           intakeDate: animal.intakeDate ?? undefined,
         }}
+        photos={animal.photos}
       />
     </div>
   );

@@ -4,6 +4,8 @@ import { getListingById } from "@/data/listings";
 import { UrgencyTierBadge } from "@/components/listings/urgency-tier-badge";
 import { DeadlineCountdown } from "@/components/listings/deadline-countdown";
 import { CopyLinkButton } from "@/components/listings/copy-link-button";
+import { PhotoGallery } from "@/components/listings/photo-gallery";
+import { photoAltText } from "@/lib/utils";
 
 const genderLabels: Record<string, string> = {
   MALE: "Male",
@@ -64,6 +66,9 @@ export default async function ListingDetailPage({
 
   const animal = listing.animal;
   const shelter = animal.shelter;
+  const orderedPhotos = [...animal.photos].sort(
+    (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
+  );
   const age = formatAge(animal.ageYears, animal.ageMonths);
   const speciesLabel = animal.species.charAt(0) + animal.species.slice(1).toLowerCase();
 
@@ -87,8 +92,8 @@ export default async function ListingDetailPage({
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
       <article className="space-y-8">
-        {/* Photo placeholder */}
-        <div className="bg-gray-100 rounded-xl h-64 w-full" />
+        {/* Photos */}
+        <PhotoGallery photos={orderedPhotos} fallbackAlt={photoAltText(animal)} />
 
         {/* Header */}
         <section>

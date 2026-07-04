@@ -1,4 +1,6 @@
+import Image from "next/image";
 import Link from "next/link";
+import { photoAltText } from "@/lib/utils";
 import { UrgencyTierBadge } from "./urgency-tier-badge";
 
 type ListingCardProps = {
@@ -11,6 +13,7 @@ type ListingCardProps = {
     species: string;
     breed: string | null;
     shelter: { name: string; city: string; state: string };
+    photos?: { url: string; altText: string | null }[];
   };
 };
 
@@ -33,11 +36,22 @@ export function ListingCard({ id, urgency, deadlineAt, notes, animal }: ListingC
   const deadline = deadlineDisplay(deadlineAt);
   const speciesLabel =
     animal.species.charAt(0) + animal.species.slice(1).toLowerCase();
+  const photo = animal.photos?.[0];
 
   return (
     <Link href={`/listings/${id}`} className="block h-full">
       <article className="border rounded-lg overflow-hidden hover:shadow-md transition-shadow h-full flex flex-col">
-        <div className="bg-gray-100 h-40 w-full flex-shrink-0" />
+        <div className="relative bg-gray-100 aspect-square w-full flex-shrink-0">
+          {photo && (
+            <Image
+              src={photo.url}
+              alt={photoAltText(animal)}
+              fill
+              className="object-cover"
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+            />
+          )}
+        </div>
 
         <div className="p-4 space-y-3 flex flex-col flex-1">
           <div className="flex items-start justify-between gap-2">

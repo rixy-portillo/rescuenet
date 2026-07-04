@@ -12,6 +12,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { PhotoUploader } from "@/components/forms/photo-uploader";
+import { PendingPhotoPicker, type PendingPhoto } from "@/components/forms/pending-photo-picker";
+import { uploadPhotoToR2 } from "@/lib/upload-photo";
 import { CreateAnimalInput, createAnimalSchema } from "@/lib/validators";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -20,14 +23,24 @@ import { useForm, type Resolver } from "react-hook-form";
 
 type Shelter = { id: string; name: string };
 
+type Photo = {
+  id: string;
+  url: string;
+  altText: string | null;
+  isPrimary: boolean;
+};
+
 type Props = {
   shelters: Shelter[];
   animal?: CreateAnimalInput & { id: string };
+  photos?: Photo[];
 };
 
-export function AnimalForm({ shelters, animal }: Props) {
+export function AnimalForm({ shelters, animal, photos }: Props) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
+  const [pendingPhotos, setPendingPhotos] = useState<PendingPhoto[]>([]);
+  const [savingPhotos, setSavingPhotos] = useState(false);
   const isEditing = !!animal;
 
   const {
@@ -46,10 +59,33 @@ export function AnimalForm({ shelters, animal }: Props) {
       setError(null);
       if (isEditing) {
         await updateAnimal(animal.id, data);
-      } else {
-        await createAnimal(data);
+        router.push("/admin/animals");
+        return;
       }
-      router.push("/admin/animals");
+
+      const created = await createAnimal(data);
+
+      if (pendingPhotos.length > 0) {
+        setSavingPhotos(true);
+        const failures: string[] = [];
+        for (const pending of pendingPhotos) {
+          try {
+            await uploadPhotoToR2(created.id, pending.file);
+          } catch {
+            failures.push(pending.file.name);
+          } finally {
+            URL.revokeObjectURL(pending.previewUrl);
+          }
+        }
+        setSavingPhotos(false);
+        if (failures.length > 0) {
+          alert(
+            `Animal created, but these photos failed to upload: ${failures.join(", ")}. You can add them from this page.`
+          );
+        }
+      }
+
+      router.push(`/admin/animals/${created.id}`);
     } catch {
       setError("Failed to save animal. Please try again.");
     }
@@ -211,11 +247,30 @@ export function AnimalForm({ shelters, animal }: Props) {
         <Textarea id="behavioralNotes" rows={2} {...register("behavioralNotes")} />
       </div>
 
+      <div className="space-y-1">
+        <Label>Photos</Label>
+        {isEditing ? (
+          <PhotoUploader animalId={animal.id} photos={photos ?? []} />
+        ) : (
+          <PendingPhotoPicker photos={pendingPhotos} onChange={setPendingPhotos} />
+        )}
+      </div>
+
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="flex items-center gap-3">
-        <Button type="submit" disabled={isSubmitting} className={isEditing ? "bg-blue-600 text-white hover:bg-blue-700" : ""}>
-          {isSubmitting ? "Saving..." : isEditing ? "Save Changes" : "Create Animal"}
+        <Button
+          type="submit"
+          disabled={isSubmitting || savingPhotos}
+          className={isEditing ? "bg-blue-600 text-white hover:bg-blue-700" : ""}
+        >
+          {savingPhotos
+            ? "Uploading photos..."
+            : isSubmitting
+              ? "Saving..."
+              : isEditing
+                ? "Save Changes"
+                : "Create Animal"}
         </Button>
         {isEditing && (
           <Button type="button" variant="destructive" onClick={handleDelete}>

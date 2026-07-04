@@ -6,6 +6,16 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function photoAltText(animal: {
+  name: string | null;
+  species: string;
+  breed?: string | null;
+}): string {
+  const speciesLabel = animal.species.charAt(0) + animal.species.slice(1).toLowerCase();
+  const subject = animal.name ?? `An unnamed ${speciesLabel.toLowerCase()}`;
+  return animal.breed ? `${subject}, a ${animal.breed}` : subject;
+}
+
 export function formatDeadline(deadlineAt: Date | null): string | null {
   if (!deadlineAt) return null;
 

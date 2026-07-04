@@ -86,3 +86,30 @@ export const updateListingStatusSchema = z.object({
 export type UpdateListingStatusInput = z.infer<
   typeof updateListingStatusSchema
 >;
+
+// ──────────────────────────────────────
+// Photo
+// ──────────────────────────────────────
+
+export const ALLOWED_PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+export const MAX_PHOTO_SIZE_BYTES = 8 * 1024 * 1024;
+
+export const requestPhotoUploadSchema = z.object({
+  animalId: z.string().min(1),
+  contentType: z.enum(ALLOWED_PHOTO_TYPES, { error: "Unsupported image type" }),
+  fileSize: z
+    .number()
+    .int()
+    .positive()
+    .max(MAX_PHOTO_SIZE_BYTES, "Image must be under 8MB"),
+});
+
+export type RequestPhotoUploadInput = z.infer<typeof requestPhotoUploadSchema>;
+
+export const confirmPhotoUploadSchema = z.object({
+  animalId: z.string().min(1),
+  r2Key: z.string().min(1),
+  altText: z.string().optional(),
+});
+
+export type ConfirmPhotoUploadInput = z.infer<typeof confirmPhotoUploadSchema>;
