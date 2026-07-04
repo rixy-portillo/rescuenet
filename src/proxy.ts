@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   // Admin routes require an Auth.js session cookie.
   // The actual session validation happens server-side in the admin pages.
-  // This middleware is a fast gate to redirect unauthenticated users.
+  // This proxy is a fast gate to redirect unauthenticated users.
   const sessionCookie =
     request.cookies.get("authjs.session-token") ??
     request.cookies.get("__Secure-authjs.session-token");
