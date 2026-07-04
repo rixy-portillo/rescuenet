@@ -47,17 +47,24 @@ export async function confirmPhotoUpload(input: ConfirmPhotoUploadInput) {
   await requireAdmin();
   const { animalId, r2Key, altText } = confirmPhotoUploadSchema.parse(input);
 
-  const photoCount = await prisma.photo.count({ where: { animalId } });
+  const photo = await prisma.$transaction(async (tx) => {
+    // Serializes confirmations for the same animal so two concurrent uploads
+    // can't both read photoCount === 0 and both end up sortOrder 0 / isPrimary
+    // true. Released automatically when the transaction ends.
+    await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${animalId}))`;
 
-  const photo = await prisma.photo.create({
-    data: {
-      animalId,
-      r2Key,
-      url: getPublicUrl(r2Key),
-      altText,
-      sortOrder: photoCount,
-      isPrimary: photoCount === 0,
-    },
+    const photoCount = await tx.photo.count({ where: { animalId } });
+
+    return tx.photo.create({
+      data: {
+        animalId,
+        r2Key,
+        url: getPublicUrl(r2Key),
+        altText,
+        sortOrder: photoCount,
+        isPrimary: photoCount === 0,
+      },
+    });
   });
 
   revalidatePath(`/admin/animals/${animalId}`);

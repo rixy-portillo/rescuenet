@@ -31,12 +31,26 @@ export function PhotoUploader({ animalId, photos: initialPhotos }: Props) {
     setError(null);
     setUploading(true);
     try {
-      for (const file of Array.from(files)) {
-        const photo = await uploadPhotoToR2(animalId, file);
-        setPhotos((prev) => sortByPrimary([...prev, photo]));
+      const results = await Promise.allSettled(
+        Array.from(files).map((file) => uploadPhotoToR2(animalId, file))
+      );
+
+      const uploaded: Photo[] = [];
+      const failures: string[] = [];
+      for (const result of results) {
+        if (result.status === "fulfilled") {
+          uploaded.push(result.value);
+        } else {
+          failures.push(result.reason instanceof Error ? result.reason.message : "Upload failed");
+        }
       }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed. Please try again.");
+
+      if (uploaded.length > 0) {
+        setPhotos((prev) => sortByPrimary([...prev, ...uploaded]));
+      }
+      if (failures.length > 0) {
+        setError(failures.join("; "));
+      }
     } finally {
       setUploading(false);
       if (inputRef.current) inputRef.current.value = "";

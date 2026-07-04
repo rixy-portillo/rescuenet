@@ -62,15 +62,29 @@ export function AnimalForm({ shelters, animal, photos }: Props) {
       if (pendingPhotos.length > 0) {
         setSavingPhotos(true);
         const failures: string[] = [];
-        for (const pending of pendingPhotos) {
-          try {
-            await uploadPhotoToR2(created.id, pending.file);
-          } catch {
-            failures.push(pending.file.name);
-          } finally {
-            URL.revokeObjectURL(pending.previewUrl);
-          }
+        const [firstPhoto, ...restPhotos] = pendingPhotos;
+
+        // Upload the designated primary (shown as "Primary" in the picker)
+        // alone first, so it's confirmed before anything else can race it
+        // for photoCount === 0. The rest can then upload in parallel safely.
+        try {
+          await uploadPhotoToR2(created.id, firstPhoto.file);
+        } catch {
+          failures.push(firstPhoto.file.name);
+        } finally {
+          URL.revokeObjectURL(firstPhoto.previewUrl);
         }
+
+        if (restPhotos.length > 0) {
+          const results = await Promise.allSettled(
+            restPhotos.map((pending) => uploadPhotoToR2(created.id, pending.file))
+          );
+          results.forEach((result, index) => {
+            if (result.status === "rejected") failures.push(restPhotos[index].file.name);
+          });
+          restPhotos.forEach((pending) => URL.revokeObjectURL(pending.previewUrl));
+        }
+
         setSavingPhotos(false);
         if (failures.length > 0) {
           alert(
