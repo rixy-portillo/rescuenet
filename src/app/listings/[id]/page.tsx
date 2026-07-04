@@ -5,7 +5,7 @@ import { UrgencyTierBadge } from "@/components/listings/urgency-tier-badge";
 import { DeadlineCountdown } from "@/components/listings/deadline-countdown";
 import { CopyLinkButton } from "@/components/listings/copy-link-button";
 import { PhotoGallery } from "@/components/listings/photo-gallery";
-import { photoAltText } from "@/lib/utils";
+import { photoAltText, speciesLabel } from "@/lib/utils";
 
 const genderLabels: Record<string, string> = {
   MALE: "Male",
@@ -70,7 +70,6 @@ export default async function ListingDetailPage({
     (a, b) => Number(b.isPrimary) - Number(a.isPrimary)
   );
   const age = formatAge(animal.ageYears, animal.ageMonths);
-  const speciesLabel = animal.species.charAt(0) + animal.species.slice(1).toLowerCase();
 
   const profileFields = [
     { label: "Age", value: age },
@@ -101,7 +100,7 @@ export default async function ListingDetailPage({
             <div>
               <h1 className="text-3xl font-bold">{animal.name ?? "Unnamed"}</h1>
               <p className="text-muted-foreground mt-1">
-                {speciesLabel}
+                {speciesLabel(animal.species)}
                 {animal.breed ? ` · ${animal.breed}` : ""}
                 {animal.breedSecondary ? ` / ${animal.breedSecondary}` : ""}
               </p>

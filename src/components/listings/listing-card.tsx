@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { photoAltText } from "@/lib/utils";
+import { photoAltText, speciesLabel, type PhotoPreview } from "@/lib/utils";
 import { UrgencyTierBadge } from "./urgency-tier-badge";
 
 type ListingCardProps = {
@@ -13,7 +13,7 @@ type ListingCardProps = {
     species: string;
     breed: string | null;
     shelter: { name: string; city: string; state: string };
-    photos?: { url: string; altText: string | null }[];
+    photos?: Pick<PhotoPreview, "url" | "altText">[];
   };
 };
 
@@ -34,8 +34,6 @@ function deadlineDisplay(
 
 export function ListingCard({ id, urgency, deadlineAt, notes, animal }: ListingCardProps) {
   const deadline = deadlineDisplay(deadlineAt);
-  const speciesLabel =
-    animal.species.charAt(0) + animal.species.slice(1).toLowerCase();
   const photo = animal.photos?.[0];
 
   return (
@@ -59,7 +57,7 @@ export function ListingCard({ id, urgency, deadlineAt, notes, animal }: ListingC
               <p className="font-semibold">
                 {animal.name ?? "Unnamed"}{" "}
                 <span className="text-muted-foreground font-normal text-sm">
-                  ({speciesLabel})
+                  ({speciesLabel(animal.species)})
                 </span>
               </p>
               {animal.breed && (

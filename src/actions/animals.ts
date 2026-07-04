@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { deleteObject } from "@/lib/r2";
+import { deleteObjects } from "@/lib/r2";
 import { CreateAnimalInput, createAnimalSchema } from "@/lib/validators";
 
 async function requireAdmin() {
@@ -40,7 +40,7 @@ export async function deleteAnimal(id: string) {
 
   const photos = await prisma.photo.findMany({ where: { animalId: id }, select: { r2Key: true } });
   await prisma.animal.delete({ where: { id } });
-  await Promise.all(photos.map((photo) => deleteObject(photo.r2Key)));
+  await deleteObjects(photos.map((photo) => photo.r2Key));
 
   revalidatePath("/admin/animals");
   redirect("/admin/animals");

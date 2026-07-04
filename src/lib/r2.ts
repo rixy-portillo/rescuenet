@@ -12,17 +12,33 @@ const r2Client = new S3Client({
 
 const BUCKET = process.env.R2_BUCKET_NAME!;
 
-export async function getUploadUrl(key: string, contentType: string) {
+export async function getUploadUrl(key: string, contentType: string, contentLength: number) {
   const command = new PutObjectCommand({
     Bucket: BUCKET,
     Key: key,
     ContentType: contentType,
+    ContentLength: contentLength,
   });
   return getSignedUrl(r2Client, command, { expiresIn: 300 });
 }
 
-export async function deleteObject(key: string) {
+async function deleteObject(key: string) {
   await r2Client.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: key }));
+}
+
+/**
+ * Best-effort cleanup: never throws. Callers use this after a DB delete has
+ * already committed, so a transient R2 failure should never block the rest
+ * of the operation — at worst it leaves an orphaned (invisible) R2 object,
+ * never a DB row pointing at a file that no longer exists.
+ */
+export async function deleteObjects(keys: string[]) {
+  const results = await Promise.allSettled(keys.map(deleteObject));
+  results.forEach((result, index) => {
+    if (result.status === "rejected") {
+      console.error(`Failed to delete R2 object ${keys[index]}`, result.reason);
+    }
+  });
 }
 
 export function getPublicUrl(key: string) {

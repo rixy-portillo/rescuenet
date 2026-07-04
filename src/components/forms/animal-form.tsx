@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { PhotoUploader } from "@/components/forms/photo-uploader";
 import { PendingPhotoPicker, type PendingPhoto } from "@/components/forms/pending-photo-picker";
 import { uploadPhotoToR2 } from "@/lib/upload-photo";
+import { type PhotoPreview } from "@/lib/utils";
 import { CreateAnimalInput, createAnimalSchema } from "@/lib/validators";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
@@ -23,17 +24,10 @@ import { useForm, type Resolver } from "react-hook-form";
 
 type Shelter = { id: string; name: string };
 
-type Photo = {
-  id: string;
-  url: string;
-  altText: string | null;
-  isPrimary: boolean;
-};
-
 type Props = {
   shelters: Shelter[];
   animal?: CreateAnimalInput & { id: string };
-  photos?: Photo[];
+  photos?: PhotoPreview[];
 };
 
 export function AnimalForm({ shelters, animal, photos }: Props) {

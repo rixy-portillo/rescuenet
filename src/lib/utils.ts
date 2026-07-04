@@ -1,9 +1,18 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { UrgencyTier } from "@/generated/prisma/client";
+import { Photo, UrgencyTier } from "@/generated/prisma/client";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
+}
+
+// The subset of Photo fields every display surface (admin uploader, public
+// gallery, listing card) needs. Derived from the Prisma model so a schema
+// change surfaces as a type error here instead of a silent drift.
+export type PhotoPreview = Pick<Photo, "id" | "url" | "altText" | "isPrimary">;
+
+export function speciesLabel(species: string): string {
+  return species.charAt(0) + species.slice(1).toLowerCase();
 }
 
 export function photoAltText(animal: {
@@ -11,8 +20,7 @@ export function photoAltText(animal: {
   species: string;
   breed?: string | null;
 }): string {
-  const speciesLabel = animal.species.charAt(0) + animal.species.slice(1).toLowerCase();
-  const subject = animal.name ?? `An unnamed ${speciesLabel.toLowerCase()}`;
+  const subject = animal.name ?? `An unnamed ${speciesLabel(animal.species).toLowerCase()}`;
   return animal.breed ? `${subject}, a ${animal.breed}` : subject;
 }
 

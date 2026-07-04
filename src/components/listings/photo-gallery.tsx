@@ -3,16 +3,10 @@
 import Image from "next/image";
 import { useState } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
-import { cn } from "@/lib/utils";
-
-type Photo = {
-  id: string;
-  url: string;
-  altText: string | null;
-};
+import { cn, type PhotoPreview } from "@/lib/utils";
 
 type Props = {
-  photos: Photo[];
+  photos: PhotoPreview[];
   fallbackAlt: string;
 };
 

@@ -4,8 +4,9 @@ import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { deleteObject, getPublicUrl, getUploadUrl } from "@/lib/r2";
+import { deleteObjects, getPublicUrl, getUploadUrl } from "@/lib/r2";
 import {
+  ALLOWED_PHOTO_TYPES,
   ConfirmPhotoUploadInput,
   confirmPhotoUploadSchema,
   RequestPhotoUploadInput,
@@ -18,15 +19,17 @@ async function requireAdmin() {
   return session;
 }
 
-const EXTENSION_BY_TYPE: Record<string, string> = {
+// `satisfies` ties this to ALLOWED_PHOTO_TYPES: adding a new allowed type
+// without an entry here is a compile error, not a silent ".undefined" key.
+const EXTENSION_BY_TYPE = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
-};
+} satisfies Record<(typeof ALLOWED_PHOTO_TYPES)[number], string>;
 
 export async function requestPhotoUpload(input: RequestPhotoUploadInput) {
   await requireAdmin();
-  const { animalId, contentType } = requestPhotoUploadSchema.parse(input);
+  const { animalId, contentType, fileSize } = requestPhotoUploadSchema.parse(input);
 
   const animal = await prisma.animal.findUnique({
     where: { id: animalId },
@@ -35,7 +38,7 @@ export async function requestPhotoUpload(input: RequestPhotoUploadInput) {
   if (!animal) throw new Error("Animal not found");
 
   const r2Key = `animals/${animalId}/${randomUUID()}.${EXTENSION_BY_TYPE[contentType]}`;
-  const uploadUrl = await getUploadUrl(r2Key, contentType);
+  const uploadUrl = await getUploadUrl(r2Key, contentType, fileSize);
 
   return { uploadUrl, r2Key };
 }
@@ -66,8 +69,8 @@ export async function deletePhoto(id: string) {
   const photo = await prisma.photo.findUnique({ where: { id } });
   if (!photo) throw new Error("Photo not found");
 
-  await deleteObject(photo.r2Key);
   await prisma.photo.delete({ where: { id } });
+  await deleteObjects([photo.r2Key]);
 
   if (photo.isPrimary) {
     const next = await prisma.photo.findFirst({

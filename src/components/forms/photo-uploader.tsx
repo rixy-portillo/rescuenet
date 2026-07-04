@@ -4,16 +4,9 @@ import Image from "next/image";
 import { useRef, useState, useTransition } from "react";
 import { deletePhoto, reorderPhotos, setPrimaryPhoto } from "@/actions/photos";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { cn, type PhotoPreview as Photo } from "@/lib/utils";
 import { uploadPhotoToR2 } from "@/lib/upload-photo";
 import { ALLOWED_PHOTO_TYPES } from "@/lib/validators";
-
-type Photo = {
-  id: string;
-  url: string;
-  altText: string | null;
-  isPrimary: boolean;
-};
 
 type Props = {
   animalId: string;
@@ -31,6 +24,7 @@ export function PhotoUploader({ animalId, photos: initialPhotos }: Props) {
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const inputRef = useRef<HTMLInputElement>(null);
+  const dragStartOrderRef = useRef<Photo[] | null>(null);
 
   async function handleFiles(files: FileList | null) {
     if (!files || files.length === 0) return;
@@ -51,6 +45,7 @@ export function PhotoUploader({ animalId, photos: initialPhotos }: Props) {
 
   function handleDelete(id: string) {
     if (!confirm("Delete this photo?")) return;
+    const previous = photos;
     setPhotos((prev) => {
       const deleted = prev.find((p) => p.id === id);
       const remaining = prev.filter((p) => p.id !== id);
@@ -63,17 +58,20 @@ export function PhotoUploader({ animalId, photos: initialPhotos }: Props) {
       try {
         await deletePhoto(id);
       } catch {
+        setPhotos(previous);
         setError("Failed to delete photo.");
       }
     });
   }
 
   function handleSetPrimary(id: string) {
+    const previous = photos;
     setPhotos((prev) => sortByPrimary(prev.map((p) => ({ ...p, isPrimary: p.id === id }))));
     startTransition(async () => {
       try {
         await setPrimaryPhoto(id);
       } catch {
+        setPhotos(previous);
         setError("Failed to set primary photo.");
       }
     });
@@ -98,6 +96,8 @@ export function PhotoUploader({ animalId, photos: initialPhotos }: Props) {
 
   function handleDragEnd() {
     setDraggingId(null);
+    const previous = dragStartOrderRef.current;
+    dragStartOrderRef.current = null;
     startTransition(async () => {
       try {
         await reorderPhotos(
@@ -105,6 +105,7 @@ export function PhotoUploader({ animalId, photos: initialPhotos }: Props) {
           photos.map((p) => p.id)
         );
       } catch {
+        if (previous) setPhotos(previous);
         setError("Failed to save photo order.");
       }
     });
@@ -118,7 +119,10 @@ export function PhotoUploader({ animalId, photos: initialPhotos }: Props) {
             <div
               key={photo.id}
               draggable={!photo.isPrimary}
-              onDragStart={() => setDraggingId(photo.id)}
+              onDragStart={() => {
+                dragStartOrderRef.current = photos;
+                setDraggingId(photo.id);
+              }}
               onDragOver={(e) => handleDragOver(e, photo.id)}
               onDragEnd={handleDragEnd}
               className={cn(
