@@ -12,7 +12,9 @@
     "db:studio": "npx prisma studio",
     "db:reset": "npx prisma migrate reset",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "test:integration:setup": "tsx scripts/setup-test-db.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts"
   },
   "prisma": {
     "seed": "npx tsx prisma/seed.ts"

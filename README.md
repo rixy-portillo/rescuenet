@@ -45,6 +45,7 @@ npm run dev                  # start the dev server at localhost:3000
 | Variable | Purpose |
 |---|---|
 | `DATABASE_URL` | Postgres connection string |
+| `TEST_DATABASE_URL` | Separate database (same Postgres instance) used only by integration tests |
 | `AUTH_SECRET` | Auth.js session secret — generate with `openssl rand -base64 32` |
 | `AUTH_GOOGLE_ID` / `AUTH_GOOGLE_SECRET` | Google OAuth client credentials |
 | `ADMIN_EMAILS` | Comma-separated allowlist of emails permitted to sign in |
@@ -56,13 +57,17 @@ R2 buckets need a CORS policy allowing `PUT`/`GET`/`HEAD` from your app's origin
 ## Commands
 
 ```bash
-docker compose up -d   # Start PostgreSQL
-npm run db:migrate     # Run Prisma migrations
-npm run db:seed        # Seed sample data
-npm run db:studio      # Open Prisma Studio (DB GUI)
-npm run dev            # Start dev server (localhost:3000)
-npm run build          # Production build
-npm run lint           # ESLint
+docker compose up -d           # Start PostgreSQL
+npm run db:migrate             # Run Prisma migrations
+npm run db:seed                # Seed sample data
+npm run db:studio              # Open Prisma Studio (DB GUI)
+npm run dev                    # Start dev server (localhost:3000)
+npm run build                  # Production build
+npm run lint                   # ESLint
+npm test                       # Run unit tests (pure logic, no DB)
+npm run test:watch             # Unit tests in watch mode
+npm run test:integration:setup # One-time: sync the schema to the test database
+npm run test:integration       # Run integration tests (real DB, mocked auth/R2)
 ```
 
 ## Project Structure

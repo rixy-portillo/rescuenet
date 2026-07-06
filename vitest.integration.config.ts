@@ -6,11 +6,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    exclude: [
-      "**/node_modules/**",
-      "**/dist/**",
-      "**/.{idea,git,cache,output,temp}/**",
-      "**/*.integration.test.ts",
-    ],
+    include: ["src/actions/**/*.integration.test.ts"],
+    setupFiles: ["./vitest.integration.setup.ts"],
   },
 });
