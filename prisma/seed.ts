@@ -1,4 +1,6 @@
-import "dotenv/config";
+import { config } from "dotenv";
+config({ path: ".env.local" });
+
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
@@ -165,19 +167,43 @@ async function main() {
     }),
   ]);
 
+  // Reuses real photos already sitting in the R2 bucket (from earlier manual
+  // testing) rather than re-uploading — matched to each animal by species/breed.
+  const photoKeysByAnimalIndex = [
+    "animals/cmlixzk2500030zsbkan02dmg/0c51f72d-7faa-424d-a6b2-b972286ab974.webp", // Buddy — Labrador
+    "animals/cmlixzk2600040zsbwrjumqgx/7621b428-b6b4-4cdc-b563-106e26a9b692.jpg", // Whiskers — tabby cat
+    "animals/cmlixzk2700050zsb2gu9wuor/8558c9ee-6640-46bd-97a2-c12e1a94b2a1.jpg", // Pit Bull/Boxer mix
+    "animals/cmlixzk2800060zsb9os1hxvc/f912508b-7295-47dc-b1a6-a26bf35fc8fe.jpg", // Luna — Siamese
+    "animals/cmlixzk2900070zsb39xeeyji/cc4d5d85-63ff-466e-84df-03d67fea1a2d.jpg", // Max — German Shepherd
+  ];
+
+  await Promise.all(
+    animals.map((animal, index) =>
+      prisma.photo.create({
+        data: {
+          animalId: animal.id,
+          r2Key: photoKeysByAnimalIndex[index],
+          url: `${process.env.R2_PUBLIC_URL}/${photoKeysByAnimalIndex[index]}`,
+          isPrimary: true,
+          sortOrder: 0,
+        },
+      })
+    )
+  );
+
   // Create listings with varying urgency
   const now = new Date();
   const daysFromNow = (days: number) =>
     new Date(now.getTime() + days * 24 * 60 * 60 * 1000);
 
   await Promise.all([
-    // LAST_CALL — Buddy has 1 day
+    // LAST_CALL — Buddy has 28 days
     prisma.listing.create({
       data: {
         animalId: animals[0].id,
         status: "ACTIVE",
         urgency: "LAST_CALL",
-        deadlineAt: daysFromNow(1),
+        deadlineAt: daysFromNow(28),
         riskReason: "TIME_LIMIT",
         notes: "Hold period expires tomorrow. Needs rescue or foster ASAP.",
         sourceUrl: "https://www.austintexas.gov/austin-animal-center",
@@ -192,13 +218,13 @@ async function main() {
         },
       },
     }),
-    // HIGH — Whiskers has 3 days
+    // HIGH — Whiskers has 35 days
     prisma.listing.create({
       data: {
         animalId: animals[1].id,
         status: "ACTIVE",
         urgency: "HIGH",
-        deadlineAt: daysFromNow(3),
+        deadlineAt: daysFromNow(35),
         riskReason: "SPACE",
         notes: "Shelter at capacity. Cat wing is full.",
         verificationStatus: "VERIFIED",
@@ -233,13 +259,13 @@ async function main() {
         },
       },
     }),
-    // MED — Luna has 10 days
+    // MED — Luna has 45 days
     prisma.listing.create({
       data: {
         animalId: animals[3].id,
         status: "ACTIVE",
         urgency: "MED",
-        deadlineAt: daysFromNow(10),
+        deadlineAt: daysFromNow(45),
         riskReason: "SPACE",
         publishedAt: now,
         statusHistory: {
@@ -250,15 +276,15 @@ async function main() {
         },
       },
     }),
-    // LAST_CALL — Max, senior dog, 12 hours
+    // LAST_CALL — Max, senior dog, 25 days
     prisma.listing.create({
       data: {
         animalId: animals[4].id,
         status: "ACTIVE",
         urgency: "LAST_CALL",
-        deadlineAt: new Date(now.getTime() + 12 * 60 * 60 * 1000),
+        deadlineAt: daysFromNow(25),
         riskReason: "TIME_LIMIT",
-        notes: "Senior dog, hold period expired. On tomorrow's euthanasia list.",
+        notes: "Senior dog, hold period expiring soon. On the euthanasia list unless rescued.",
         sourceNotes: "Confirmed by shelter staff via phone call.",
         verificationStatus: "VERIFIED",
         verifiedAt: now,
@@ -276,6 +302,7 @@ async function main() {
   console.log("Seed complete!");
   console.log(`  ${3} shelters created`);
   console.log(`  ${animals.length} animals created`);
+  console.log(`  ${animals.length} photos created`);
   console.log(`  ${5} listings created`);
 }
 
